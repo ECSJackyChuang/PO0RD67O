@@ -1,7 +1,6 @@
-# PO0RD67O
 Testing for PL/SQL 
 
-# Headers
+# Following Markdown template for README.md
 
 ```
 # h1 Heading 8-)
