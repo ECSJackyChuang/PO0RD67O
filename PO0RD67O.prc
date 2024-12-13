@@ -53,9 +53,15 @@ CREATE OR REPLACE PROCEDURE APPS.PO0RD67O (
     TYPE demand_qty_array_type IS TABLE OF NUMBER INDEX BY PLS_INTEGER;
     demand_qty_array demand_qty_array_type;
     
-    v_start_date date := trunc(to_date(vSTART_DATE),'iw');--¬‡¥´¨∞wk
+    v_start_date date := trunc(to_date(vSTART_DATE),'iw');--ËΩâÊèõÁÇ∫wk
     v_pn varchar2(30) := replace(trim(vPN),' ','');--'SB21D13676';
     v_type_control varchar2(10);
+    
+    --for wk52 control
+    v_current_date date;
+    v_iso_year varchar2(10);
+    v_iso_week varchar2(10);
+    
     
     v_showing_week number:= 26;--showing 26 weeks
     v_week_diff number:=0;
@@ -69,7 +75,7 @@ CREATE OR REPLACE PROCEDURE APPS.PO0RD67O (
     select distinct trim(CUS_PN) CUS_PN
     FROM ecs_lenovo_demand_pull_t
     WHERE CUS_PN = NVL(v_pn,CUS_PN)--p_pn
-    and version_week >= to_number(to_char(v_start_date,'WW'))--±∆∞£∑Ì∂g•H´e™∫∏ÍÆ∆
+    and version_week >= to_number(to_char(v_start_date,'WW'))--ÊéíÈô§Áï∂ÈÄ±‰ª•ÂâçÁöÑË≥áÊñô
     and disable_date is null
     order by CUS_PN;
     
@@ -77,7 +83,7 @@ CREATE OR REPLACE PROCEDURE APPS.PO0RD67O (
     select distinct site,CUS_PN
     FROM ecs_lenovo_demand_pull_t
     WHERE trim(CUS_PN) = p_pn
-    and version_week >= to_number(to_char(v_start_date,'WW'))--±∆∞£∑Ì∂g•H´e™∫∏ÍÆ∆
+    and version_week >= to_number(to_char(v_start_date,'WW'))--ÊéíÈô§Áï∂ÈÄ±‰ª•ÂâçÁöÑË≥áÊñô
     and disable_date is null
     order by site; 
     
@@ -95,7 +101,7 @@ CREATE OR REPLACE PROCEDURE APPS.PO0RD67O (
     from ecs_lenovo_demand_pull_t xx
     where trim(CUS_PN) = p_pn
     and site = p_site
-    and version_week >= to_number(to_char(v_start_date,'WW'))--±∆∞£∑Ì∂g•H´e™∫∏ÍÆ∆
+    and version_week >= to_number(to_char(v_start_date,'WW'))--ÊéíÈô§Áï∂ÈÄ±‰ª•ÂâçÁöÑË≥áÊñô
     and disable_date is null
     order by WK_VERSION
     ;
@@ -185,21 +191,52 @@ begin
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , 'Week', P_STYLE_TITLE ,P_CONTROL );
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , 'SOI', P_STYLE_TITLE ,P_CONTROL );
             
-            /*¶L•X26∂gª›®D™∫§È¥¡: ex:24wk40 */
-            --´e§@∂g
+            /*Âç∞Âá∫26ÈÄ±ÈúÄÊ±ÇÁöÑÊó•Êúü: ex:24wk40 */
+            --Ââç‰∏ÄÈÄ±
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL ,
-                TO_CHAR(trunc(trunc(trunc(v_start_date) -7,'iw')-1/86400,'iw'),'YY')
+                --TO_CHAR(trunc(trunc(trunc(v_start_date) -7,'iw')-1/86400,'iw'),'YY')
+                TO_CHAR(trunc(trunc(trunc(v_start_date) -7,'iw'),'iw'),'YY')
                 ||'WK'
                 ||TO_CHAR(trunc(trunc(v_start_date) -7,'iw'),'WW') 
                 , P_STYLE_TITLE ,P_CONTROL );
             
             for i in 0..(v_showing_week-1) loop
-                --tuesday is default start day. 
+                
+                --20241213 jacky added
+                v_current_date := trunc(v_start_date + i*7, 'IW'); -- Ensure the date is Monday
+                v_iso_year := to_char(v_current_date, 'YY');--IYYY
+                v_iso_week := to_char(v_current_date, 'IW');
+            
+                -- Check if the week is 53 and adjust if it crosses the year boundary
+                if v_iso_week = '53' and to_char(v_current_date, 'MM') = '01' then
+                    v_iso_week := '01';
+                    v_iso_year := to_char(v_current_date, 'YY');
+                end if;
+            
+            
+--                --Mon is default start day. 
+--                ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL ,
+----                TO_CHAR(trunc(trunc(trunc(v_start_date) + I*7,'iw')-1/86400,'iw'),'YY')
+--                TO_CHAR(trunc(trunc(trunc(v_start_date) + I*7,'iw'),'iw'),'YY')
+--                ||'WK'
+--                ||TO_CHAR(trunc(trunc(v_start_date) + I*7,'iw'),'WW') 
+--                , P_STYLE_TITLE ,P_CONTROL );
+                
+--                ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL ,
+--                TO_CHAR(trunc(trunc(trunc(v_start_date) + I*7,'iw'),'iw'),'YY')
+--                ||'WK'
+--                ||TO_CHAR(trunc(trunc(v_start_date) + I*7,'iw'),'WW') 
+--                , P_STYLE_TITLE ,P_CONTROL );
+                
                 ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL ,
-                TO_CHAR(trunc(trunc(trunc(v_start_date) + I*7,'iw')-1/86400,'iw'),'YY')
-                ||'WK'
-                ||TO_CHAR(trunc(trunc(v_start_date) + I*7,'iw'),'WW') 
+                v_iso_year || 'WK' ||v_iso_week
                 , P_STYLE_TITLE ,P_CONTROL );
+--                dbms_output.put_line(
+--                    to_char(v_current_date, 'DD-MON-YY') || '~' ||
+--                    v_iso_year || 'WK' ||
+--                    v_iso_week
+--                );
+                
             end loop;
             -- Row end --
             ECS_MRP_OOXML_PKG.ADD_OOXML_RND_AUTO( X_OUTPUT, X_SWAP, X_ROW );
@@ -207,14 +244,14 @@ begin
             -- Row start --
             ECS_MRP_OOXML_PKG.ADD_OOXML_ROW_AUTO( X_OUTPUT, X_SWAP, X_ROW, X_COL );
             
-            --¶L•X´~¶W
+            --Âç∞Âá∫ÂìÅÂêç
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , lr_site.site, P_STYLE_NORMAL ,P_CONTROL );
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , lr_site.CUS_PN, P_STYLE_NORMAL ,P_CONTROL );
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , '', P_STYLE_NORMAL ,P_CONTROL );    
 
-            --´e§@∂g
+            --Ââç‰∏ÄÈÄ±
             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , TO_CHAR(v_start_date-7,'MM/DD'), P_STYLE_TITLE ,P_CONTROL );
-            --¶L•X∑Ì∂g∞_©l§È:∂g§@§È¥¡
+            --Âç∞Âá∫Áï∂ÈÄ±Ëµ∑ÂßãÊó•:ÈÄ±‰∏ÄÊó•Êúü
             for i in 0..(v_showing_week-1) loop
                 --Monday is default start day. 
                 ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , TO_CHAR(v_start_date + I*7,'MM/DD'), P_STYLE_TITLE ,P_CONTROL );
@@ -228,7 +265,7 @@ begin
                 v_week_diff :=0;
                 v_week_diff := to_number(to_char(v_start_date,'WW')) - lr_version.version_week;
                 
-                -- ™Ï©l§∆ 26 ∂g™∫ª›®D∂q®Ï∞}¶C§§
+                -- ÂàùÂßãÂåñ 26 ÈÄ±ÁöÑÈúÄÊ±ÇÈáèÂà∞Èô£Âàó‰∏≠
                 demand_qty_array(1) := lr_version.demand_qty_wk1;
                 demand_qty_array(2) := lr_version.demand_qty_wk2;
                 demand_qty_array(3) := lr_version.demand_qty_wk3;
@@ -264,16 +301,16 @@ begin
     --            ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , lr_version.demand_qty_wk2, P_STYLE_NORMAL ,P_CONTROL );
     --            ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , lr_version.demand_qty_wk3, P_STYLE_NORMAL ,P_CONTROL );
                 
-                /*-- ®œ•Œ∞j∞È®”øÈ•X®C∂g™∫ª›®D∂q
+                /*-- ‰ΩøÁî®Ëø¥Âúà‰æÜËº∏Âá∫ÊØèÈÄ±ÁöÑÈúÄÊ±ÇÈáè
                 FOR i IN 1..26 LOOP
                     
                     if v_week_diff <> 0 then
                         if v_week_diff > 0 then--past
                             if (i-v_week_diff) < 0 then
-    --                            if (v_week_diff-i) = 0 then--™Ì•‹¨∞´e§@∂g
+    --                            if (v_week_diff-i) = 0 then--Ë°®Á§∫ÁÇ∫Ââç‰∏ÄÈÄ±
     --                                ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , lr_version.LAST_PULL_QTY , P_STYLE_NORMAL ,P_CONTROL );
     --                            else
-                                    null;--´D´e§@∂g§£¶L
+                                    null;--ÈùûÂâç‰∏ÄÈÄ±‰∏çÂç∞
     --                            end if;
                             else
                                 ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO(
@@ -281,9 +318,9 @@ begin
                             end if;
                         else--v_week_diff < 0: future
                             if (i + v_week_diff) <= 1 then
-                                if (i-ABS(v_week_diff)-1) = 0 then--™Ì•‹´e§@∂g
+                                if (i-ABS(v_week_diff)-1) = 0 then--Ë°®Á§∫Ââç‰∏ÄÈÄ±
                                     ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , lr_version.LAST_PULL_QTY , P_STYLE_NORMAL ,P_CONTROL );
-                                else--´D´e§@∂g§£¶L
+                                else--ÈùûÂâç‰∏ÄÈÄ±‰∏çÂç∞
                                     ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO( X_OUTPUT, X_SWAP,X_ROW, X_COL , '*' , P_STYLE_NORMAL ,P_CONTROL );
                                 end if;
                             else
@@ -309,11 +346,11 @@ begin
                 END LOOP;*/
                 if v_week_diff > 0 then --past   
                 
-                    for i in (1+v_week_diff)-1..26 loop--±q∞_©l∂g∂}©l¶L
+                    for i in (1+v_week_diff)-1..26 loop--ÂæûËµ∑ÂßãÈÄ±ÈñãÂßãÂç∞
                         ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO(
                             X_OUTPUT, X_SWAP, X_ROW, X_COL, demand_qty_array(i), P_STYLE_demand, P_CONTROL);
                     end loop;
-                    --∏…´·¨q™≈•’
+                    --Ë£úÂæåÊÆµÁ©∫ÁôΩ
                     for i in 1..v_week_diff loop
                         ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO(X_OUTPUT, X_SWAP, X_ROW, X_COL, '0', P_STYLE_demand, P_CONTROL);
                     end loop;
@@ -327,7 +364,7 @@ begin
                             X_OUTPUT, X_SWAP, X_ROW, X_COL, demand_qty_array(i), P_STYLE_demand, P_CONTROL);
                     end loop;
                 elsif v_week_diff < 0 then --future
-                    --∏…´e¨q™≈•’
+                    --Ë£úÂâçÊÆµÁ©∫ÁôΩ
                     for i in 1..(ABS(v_week_diff)+1) loop
                         if i <> (ABS(v_week_diff)+1) then                    
                             ECS_MRP_OOXML_PKG.ADD_OOXML_COL_AUTO(X_OUTPUT, X_SWAP, X_ROW, X_COL, '*', P_STYLE_supply, P_CONTROL);
@@ -389,14 +426,14 @@ begin
     
 --    IF tmpCount > 0 THEN
 --            begin 
---            Apps.Ecs_Procsendemail(--±H´H•\Ø‡Procedure
---                L_Body,          -- P_TXT --§∫§Â°Ghtml_table¶C•X™∫∏ÍÆ∆
+--            Apps.Ecs_Procsendemail(--ÂØÑ‰ø°ÂäüËÉΩProcedure
+--                L_Body,          -- P_TXT --ÂÖßÊñáÔºöhtml_tableÂàóÂá∫ÁöÑË≥áÊñô
 --                NULL,            -- P_TXT2
 --                NULL,            -- P_TXT3
 --                NULL,            -- P_LOB
 --                L_Subject,            -- P_SUB
---                v_to_mail,            -- P_RECEIVER     --•Œcursor¶Í∞_®”™∫¶¨•Û§H
---                v_cc_mail,            -- P_CC_RECEIVER  --•Œcursor¶Í∞_®”™∫∞∆•ª¶¨•Û§H
+--                v_to_mail,            -- P_RECEIVER     --Áî®cursor‰∏≤Ëµ∑‰æÜÁöÑÊî∂‰ª∂‰∫∫
+--                v_cc_mail,            -- P_CC_RECEIVER  --Áî®cursor‰∏≤Ëµ∑‰æÜÁöÑÂâØÊú¨Êî∂‰ª∂‰∫∫
 --                'jacky.chuang@ecs.com.tw',            -- P_BCC_RECEIVER
 --                NULL,            -- P_FILENAME
 --                null,---593,            -- P_ALERT_ID
@@ -416,3 +453,4 @@ begin
 
 
 end;
+/
